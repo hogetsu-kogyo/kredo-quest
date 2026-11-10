@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>抱月クレドクエスト｜Prototype v48-monthly-redemption-limit</title>
+<title>抱月クレドクエスト｜Prototype v49-account-status</title>
 <style>
 #avatarCustomizer{display:none!important}
 
@@ -41,6 +41,24 @@ body{display:flex;justify-content:center}
 .hero-copy{position:relative;z-index:2;padding:4px 4px 0}.hero-kicker{font-size:11px;font-weight:900;letter-spacing:.15em;color:#0D6DA6}.hero-title{font-size:28px;line-height:1.32;margin:8px 0 4px;font-weight:900}.hero-sub{font-size:14px;line-height:1.6;color:#467083;margin:0;max-width:290px}
 .character-stage{position:relative;z-index:2;height:175px;margin-top:4px;display:flex;align-items:flex-end;justify-content:center}.char-placeholder{position:relative;width:110px;height:128px;border-radius:48% 48% 30% 30%;background:linear-gradient(180deg,#FFFFFF,#F1F7F9);border:4px solid #D7EEF7;box-shadow:0 10px 18px rgba(22,111,146,.13);display:flex;align-items:flex-end;justify-content:center;padding-bottom:18px}.char-placeholder:before,.char-placeholder:after{content:"";position:absolute;top:-12px;width:36px;height:36px;background:#FFFFFF;border:4px solid #D7EEF7}.char-placeholder:before{left:2px;transform:rotate(25deg);clip-path:polygon(0 0,100% 35%,40% 100%)}.char-placeholder:after{right:2px;transform:rotate(-25deg);clip-path:polygon(0 35%,100% 0,60% 100%)}.char-face{font-size:34px;font-weight:900;color:#82A4B2}.char-note{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:-28px;white-space:nowrap;font-size:9px;color:#548197;font-weight:800;background:rgba(255,255,255,.82);padding:4px 8px;border-radius:999px;border:1px dashed #A6CFDE}
 .start-btn{position:relative;z-index:5;display:flex;align-items:center;justify-content:center;gap:10px;margin:0 18px;height:58px;background:var(--yellow);color:#254455;border:0;border-radius:18px;width:calc(100% - 36px);font-weight:900;font-size:17px;box-shadow:0 8px 16px rgba(230,184,31,.27);cursor:pointer;transition:.17s}.start-btn:hover{transform:translateY(-1px);filter:brightness(1.02)}.arrow{margin-left:auto;margin-right:12px;font-size:22px}
+.home-account-prompt{margin:9px 18px 0;width:calc(100% - 36px)}
+.home-account-cta{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #A9D3E4;border-radius:15px;background:#fff;color:#155D7B;text-align:left;box-shadow:0 4px 11px rgba(31,105,131,.08);cursor:pointer}
+.home-account-cta .account-cta-icon{width:34px;height:34px;flex:none;border-radius:11px;background:#E8F6FC;display:grid;place-items:center;font-size:18px}
+.home-account-cta strong{display:block;font-size:12px;font-weight:900}
+.home-account-cta small{display:block;margin-top:3px;color:#617D8C;font-size:10px;line-height:1.45}
+.home-account-cta .account-cta-arrow{margin-left:auto;font-size:20px;color:#287D9E}
+.home-account-signedin{padding:10px 13px;border:1px solid #BBDDC7;border-radius:14px;background:#F1FAF3;color:#286441;line-height:1.45}
+.home-account-signedin strong{display:block;font-size:12px}
+.home-account-signedin small{display:block;margin-top:2px;font-size:10px;color:#527A60}
+.account-state-card{margin:0 0 12px;padding:13px 14px;border:1px solid #BBDDC7;border-radius:15px;background:#F1FAF3;color:#286441}
+.account-state-card.is-guest{border-color:#EAD69A;background:#FFF9E9;color:#765B17}
+.account-state-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.account-state-label{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:#DDF1E2;color:#286441;font-size:10px;font-weight:900}
+.account-state-card.is-guest .account-state-label{background:#F7EBC6;color:#765B17}
+.account-state-card strong{font-size:12px;line-height:1.5}
+.account-state-detail{margin-top:6px;font-size:10px;line-height:1.55;color:#527A60;overflow-wrap:anywhere}
+.account-state-card.is-guest .account-state-detail{color:#866D2C}
+.account-state-action{width:100%;margin-top:10px;padding:10px 12px;border:0;border-radius:11px;background:#176D91;color:#fff;font-size:11px;font-weight:900;cursor:pointer}
 .home-grid{position:relative;z-index:4;padding:10px 12px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#EFFBFE}.menu-card{min-height:98px;background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 10px rgba(31,105,131,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#24506A;font-weight:900;cursor:pointer}.menu-icon{font-size:27px}.menu-label{font-size:12px}
 .bottom-nav{position:fixed;bottom:0;width:min(100%,460px);height:69px;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:30}.nav-item{border:0;background:transparent;color:#8A9EAA;font-size:10px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}.nav-icon{font-size:20px;line-height:1}.nav-item.active{color:var(--blue-dark)}
 /* quest screen */
@@ -317,6 +335,7 @@ body{display:flex;justify-content:center}
         </div>
       </div>
       <button class="start-btn" onclick="startQuest()"><span>▶</span> はじめる <span class="arrow">›</span></button>
+      <div class="home-account-prompt" id="homeAccountPrompt" aria-live="polite"></div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin:10px 16px 0">
         <button class="avatar-entry" style="width:100%;margin:0" onclick="location.href='myroom.html?v=42'">
           <div class="avatar-entry-preview" id="homeRoomPreview">⌂</div>
@@ -505,6 +524,7 @@ body{display:flex;justify-content:center}
     <div class="mypage-wrap">
       <div style="font-size:12px;color:var(--muted);font-weight:800;letter-spacing:.08em">MY PAGE</div>
       <h2 style="margin:5px 0 14px;font-size:24px">あなたのクレドクエスト</h2>
+      <div class="account-state-card" id="myPageAccountState" aria-live="polite"></div>
       <div class="profile-card">
         <div class="profile-main"><div class="profile-orb">🌙</div><div><strong id="profileTitle">クレド見習い</strong><small id="profileSub">まずは気軽に1回プレイしてみよう</small></div></div>
         <div class="profile-stat"><small>累計ポイント</small><strong id="profilePoints">0 pt</strong></div>
@@ -1348,7 +1368,7 @@ document.getElementById('navHome').classList.toggle('active',id==='home');
 document.getElementById('navQuiz').classList.toggle('active',id==='quiz'||id==='boss');
 document.getElementById('navMy').classList.toggle('active',id==='mypage'||id==='avatarCustomizer'||id==='myroom'||id==='pointExchange'||id==='pointHistory');
 document.getElementById('navRank').classList.toggle('active',id==='ranking');window.scrollTo(0,0);
-if(id==='home'){renderHomeAvatar();renderPointsInNewUI();if(isAuthenticatedPlayer())refreshServerPointBalance().catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='mypage'){updateProfile();loadCustomization();if(isAuthenticatedPlayer())refreshServerPointBalance().catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='avatarCustomizer'){loadCustomization();if(isAuthenticatedPlayer())refreshServerPointBalance().catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='myroom'){loadCustomization()}if(id==='ranking')renderRanking();if(id==='pointHistory'){renderPointHistory();if(isAuthenticatedPlayer())refreshServerPointBalance().then(()=>renderPointHistory()).catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='pointExchange'){renderPointExchange();refreshPointExchangeBalance()}if(id==='account')syncAccountUI()
+if(id==='home'){renderHomeAvatar();renderAccountIndicators();renderPointsInNewUI();if(isAuthenticatedPlayer())refreshServerPointBalance().catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='mypage'){updateProfile();renderAccountIndicators();loadCustomization();if(isAuthenticatedPlayer())refreshServerPointBalance().catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='avatarCustomizer'){loadCustomization();if(isAuthenticatedPlayer())refreshServerPointBalance().catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='myroom'){loadCustomization()}if(id==='ranking')renderRanking();if(id==='pointHistory'){renderPointHistory();if(isAuthenticatedPlayer())refreshServerPointBalance().then(()=>renderPointHistory()).catch(e=>console.warn('Point balance refresh skipped',e))}if(id==='pointExchange'){renderPointExchange();refreshPointExchangeBalance()}if(id==='account')syncAccountUI()
 }
 function openRanking(){show('ranking');}
 function syncAccountUI(){const local=getLocalAccount();const name=currentUser?.user_metadata?.display_name||local?.displayName||'';if(document.getElementById('authDisplayName')&&name)document.getElementById('authDisplayName').value=name;const loggedIn=Boolean(currentUser);const resetBtn=document.getElementById('resetPasswordBtn');const logoutBtn=document.getElementById('logoutBtn');if(resetBtn)resetBtn.style.display=(supabaseClient&&(!loggedIn||authMode==='login'))?'block':'none';if(logoutBtn)logoutBtn.style.display=loggedIn?'block':'none';}
@@ -1698,7 +1718,7 @@ let stateOwnerKey=stateStoragePrefix();
 function loadState(){const p=stateStoragePrefix();state={totalPoints:0,plays:Number(localStorage.getItem(p+'plays')||0),bestCombo:Number(localStorage.getItem(p+'bestCombo')||0),lastBonus:localStorage.getItem(p+'lastBonus')||'',clearStage:Number(localStorage.getItem(p+'clearStage')||0)};stateOwnerKey=p;}
 function saveState(){const p=stateStoragePrefix();const server=window.__serverPointBalance||{};if(isAuthenticatedPlayer()&&server.loaded&&server.userId===currentUser.id)state.totalPoints=Math.max(0,Number(server.total)||0);else state.totalPoints=0;localStorage.setItem(p+'totalPoints',String(state.totalPoints));localStorage.setItem(p+'plays',String(state.plays));localStorage.setItem(p+'bestCombo',String(state.bestCombo));localStorage.setItem(p+'lastBonus',state.lastBonus||'');localStorage.setItem(p+'clearStage',String(state.clearStage||0));stateOwnerKey=p;}
 async function syncAttemptCount(){if(!supabaseClient||!currentUser)return;try{const {count,error}=await supabaseClient.from('quiz_attempts').select('id',{count:'exact',head:true}).eq('user_id',currentUser.id);if(!error&&typeof count==='number'){state.plays=count;saveState();updateProfile()}}catch(e){console.error('Attempt count sync error:',e)}}
-function updateProfile(){const snapshot=typeof window.__syncPointBalanceSafe==='function'?window.__syncPointBalanceSafe():null;const totalPoints=snapshot&&Number.isFinite(Number(snapshot.total))?Math.max(0,Number(snapshot.total)||0):0;document.getElementById('profilePoints').textContent=!isAuthenticatedPlayer()?'対象外':(snapshot?.loading?'確認中':totalPoints+' pt');document.getElementById('profilePlays').textContent=state.plays+' 回';document.getElementById('profileCombo').textContent=state.bestCombo;document.getElementById('profileQuestions').textContent=questions.length+' 問';let title='クレド見習い';if(state.plays>=10)title='クレド探検家';else if(state.plays>=5)title='クレドハンター';document.getElementById('profileTitle').textContent=title;document.getElementById('profileSub').textContent=state.plays?`これまで ${state.plays} 回クエストに参加`:'まずは気軽に1回プレイしてみよう';}
+function updateProfile(){const snapshot=typeof window.__syncPointBalanceSafe==='function'?window.__syncPointBalanceSafe():null;const totalPoints=snapshot&&Number.isFinite(Number(snapshot.total))?Math.max(0,Number(snapshot.total)||0):0;document.getElementById('profilePoints').textContent=!isAuthenticatedPlayer()?'対象外':(snapshot?.loading?'確認中':totalPoints+' pt');document.getElementById('profilePlays').textContent=state.plays+' 回';document.getElementById('profileCombo').textContent=state.bestCombo;document.getElementById('profileQuestions').textContent=questions.length+' 問';let title='クレド見習い';if(state.plays>=10)title='クレド探検家';else if(state.plays>=5)title='クレドハンター';document.getElementById('profileTitle').textContent=title;document.getElementById('profileSub').textContent=state.plays?`これまで ${state.plays} 回クエストに参加`:'まずは気軽に1回プレイしてみよう';renderAccountIndicators();}
 
 let editingIndex=-1;
 function renderLibrary(){
@@ -1754,9 +1774,51 @@ function monthlyKey(){const d=new Date();return `${d.getFullYear()}-${String(d.g
 function getLocalAccount(){try{return JSON.parse(localStorage.getItem('kredoAccount')||'null')}catch(e){return null}}
 function setLocalAccount(a){localStorage.setItem('kredoAccount',JSON.stringify(a||null))}
 function openAccount(){show('account')}
+function openAccountSignup(){authMode='signup';show('account');switchAuth('signup')}
+function renderAccountIndicators(){
+  const loggedIn=isAuthenticatedPlayer();
+  const local=getLocalAccount();
+  const displayName=currentUser?.user_metadata?.display_name||local?.displayName||currentUser?.email||'登録済みアカウント';
+  const home=document.getElementById('homeAccountPrompt');
+  if(home){
+    home.replaceChildren();
+    if(loggedIn){
+      const panel=document.createElement('div');panel.className='home-account-signedin';
+      const strong=document.createElement('strong');strong.textContent='✓ ログイン中｜ポイント獲得対象です';
+      const small=document.createElement('small');small.textContent=displayName+' として利用中';
+      panel.append(strong,small);home.append(panel);
+    }else{
+      const button=document.createElement('button');button.type='button';button.className='home-account-cta';button.addEventListener('click',openAccountSignup);
+      const icon=document.createElement('span');icon.className='account-cta-icon';icon.textContent='👤';
+      const copy=document.createElement('span');
+      const strong=document.createElement('strong');strong.textContent='アカウント登録・ログイン';
+      const small=document.createElement('small');small.textContent='ポイントを獲得するには登録・ログインが必要です';
+      copy.append(strong,small);
+      const arrow=document.createElement('span');arrow.className='account-cta-arrow';arrow.textContent='›';
+      button.append(icon,copy,arrow);home.append(button);
+    }
+  }
+  const mypage=document.getElementById('myPageAccountState');
+  if(mypage){
+    mypage.replaceChildren();
+    mypage.className='account-state-card'+(loggedIn?'':' is-guest');
+    const head=document.createElement('div');head.className='account-state-head';
+    const label=document.createElement('span');label.className='account-state-label';
+    label.textContent=loggedIn?'✓ ログイン中':'! ゲストモード利用中';
+    const title=document.createElement('strong');
+    title.textContent=loggedIn?'このアカウントはポイント獲得・交換の対象です':'このままではポイントを獲得・交換できません';
+    head.append(label,title);mypage.append(head);
+    const detail=document.createElement('div');detail.className='account-state-detail';
+    detail.textContent=loggedIn?('利用アカウント：'+displayName):'クイズを始める前に、アカウント登録またはログインをしてください。';
+    mypage.append(detail);
+    if(!loggedIn){
+      const button=document.createElement('button');button.type='button';button.className='account-state-action';button.textContent='アカウント登録・ログインする';button.addEventListener('click',openAccountSignup);mypage.append(button);
+    }
+  }
+}
 function switchAuth(mode){authMode=mode;document.getElementById('tabSignup').classList.toggle('active',mode==='signup');document.getElementById('tabLogin').classList.toggle('active',mode==='login');document.getElementById('accountTitle').textContent=mode==='signup'?'アカウントをつくる':'ログイン';document.getElementById('accountSub').textContent=mode==='signup'?'ランキングに参加するにはアカウント登録が必要です。ゲーム内の表示名だけをランキングに表示します。':'登録したメールアドレスとパスワードでログインします。';document.getElementById('displayNameField').style.display=mode==='signup'?'block':'none';document.getElementById('authPassword').setAttribute('autocomplete',mode==='signup'?'new-password':'current-password');document.getElementById('authSubmit').textContent=mode==='signup'?'アカウントを登録する':'ログイン';showAccountStatus('')}
 function showAccountStatus(msg,error=false){const el=document.getElementById('accountStatus');el.textContent=msg;el.className='account-status'+(msg?' show':'');if(msg)el.style.background=error?'#FFF3F0':'#F4FBFD';if(msg)el.style.color=error?'#A64D44':'#5A6E7C'}
-function continueDemoAccount(){const local=getLocalAccount()||{id:'demo-'+Date.now(),displayName:'デモプレイヤー',email:'',demo:true};setLocalAccount(local);currentUser=local;loadState();saveState();updateProfile();showAccountStatus('デモモードではクイズ体験のみ利用できます。ポイントの獲得・交換はできません。');showToast('👤 デモモードを開始しました')}
+function continueDemoAccount(){const local=getLocalAccount()||{id:'demo-'+Date.now(),displayName:'デモプレイヤー',email:'',demo:true};setLocalAccount(local);currentUser=local;loadState();saveState();updateProfile();renderAccountIndicators();showAccountStatus('デモモードではクイズ体験のみ利用できます。ポイントの獲得・交換はできません。');showToast('👤 デモモードを開始しました')}
 async function sendPasswordReset(){const email=document.getElementById('authEmail').value.trim();if(!supabaseClient){showAccountStatus('デモモードではパスワード再設定は利用できません。',true);return}if(!email){showAccountStatus('先にメールアドレスを入力してください。',true);return}try{const redirectTo=location.href.split('#')[0];const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo});if(error)throw error;showAccountStatus('パスワード再設定メールを送信しました。メールの案内に沿って変更してください。')}catch(err){console.error('Password reset error:',err);showAccountStatus('再設定メールの送信に失敗しました：'+(err?.message||'不明なエラー'),true)}}
 async function updateRecoveryPassword(){
   const password=document.getElementById('recoveryPassword').value;
@@ -1776,11 +1838,11 @@ async function updateRecoveryPassword(){
 }
 function showRecoveryPanel(){const panel=document.getElementById('recoveryPanel');if(panel)panel.style.display='block';}
 
-async function logoutAccount(){try{if(supabaseClient)await supabaseClient.auth.signOut()}catch(err){console.error('Logout error:',err)}currentUser=null;setLocalAccount(null);loadState();syncAccountUI();showAccountStatus('ログアウトしました。');showToast('👋 またね！')}
+async function logoutAccount(){try{if(supabaseClient)await supabaseClient.auth.signOut()}catch(err){console.error('Logout error:',err)}currentUser=null;setLocalAccount(null);loadState();syncAccountUI();renderAccountIndicators();updateProfile();showAccountStatus('ログアウトしました。');showToast('👋 またね！')}
 
 async function submitAuth(){const displayName=document.getElementById('authDisplayName').value.trim();const email=document.getElementById('authEmail').value.trim();const password=document.getElementById('authPassword').value;if(!email||!password||(authMode==='signup'&&!displayName)){showAccountStatus('入力内容を確認してください。',true);return}
   if(!supabaseClient){
-    const account={id:'local-'+Date.now(),displayName:authMode==='signup'?displayName:(getLocalAccount()?.displayName||displayName||'プレイヤー'),email,demo:true};setLocalAccount(account);currentUser=account;loadState();saveState();updateProfile();showAccountStatus('現在はデモモードです。実運用のアカウント登録はSupabase接続後に有効になります。');showToast('👤 アカウント情報を保存しました');return;
+    const account={id:'local-'+Date.now(),displayName:authMode==='signup'?displayName:(getLocalAccount()?.displayName||displayName||'プレイヤー'),email,demo:true};setLocalAccount(account);currentUser=account;loadState();saveState();updateProfile();renderAccountIndicators();showAccountStatus('現在はデモモードです。実運用のアカウント登録はSupabase接続後に有効になります。');showToast('👤 アカウント情報を保存しました');return;
   }
   try{
     if(authMode==='signup'){
@@ -1789,6 +1851,7 @@ async function submitAuth(){const displayName=document.getElementById('authDispl
       if(data.session){
         currentUser=data.user;
         await ensureProfileAfterLogin();
+        renderAccountIndicators();updateProfile();
         showAccountStatus('アカウントを登録しました。');
         show('ranking');
       }else{
@@ -1797,7 +1860,7 @@ async function submitAuth(){const displayName=document.getElementById('authDispl
         showAccountStatus('登録しました。確認メールをご確認のうえ、メール確認後にログインしてください。');
       }
     }else{
-      const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;currentUser=data.user;await ensureProfileAfterLogin();showAccountStatus('ログインしました。');showToast('👋 おかえりなさい！');show('ranking');
+      const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;currentUser=data.user;await ensureProfileAfterLogin();renderAccountIndicators();updateProfile();showAccountStatus('ログインしました。');showToast('👋 おかえりなさい！');show('ranking');
     }
   }catch(err){
     console.error('Supabase Auth error:', err);
@@ -1873,6 +1936,7 @@ async function ensureProfileAfterLogin(){
     return null;
   }
 }
+renderAccountIndicators();
 (async function restoreAuth(){
   if(supabaseClient){
     try{
@@ -1886,11 +1950,15 @@ async function ensureProfileAfterLogin(){
         if(event==='SIGNED_OUT')currentUser=null;
         if(event==='PASSWORD_RECOVERY'){currentUser=session?.user||currentUser;show('account');showRecoveryPanel();}
         syncAccountUI();
+        renderAccountIndicators();
+        if(document.getElementById('mypage')?.classList.contains('active'))updateProfile();
       });
-    }catch(e){}
+      renderAccountIndicators();
+    }catch(e){renderAccountIndicators()}
   }else{
     currentUser=getLocalAccount();
     if(currentUser){loadState();updateProfile()}
+    renderAccountIndicators();
   }
 })();
 const QUESTION_BANK_VERSION='2026-10-09-koutei-v1';
