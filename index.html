@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>抱月クレドクエスト｜Prototype v47-no-avatar</title>
+<title>抱月クレドクエスト｜Prototype v48-monthly-redemption-limit</title>
 <style>
 #avatarCustomizer{display:none!important}
 
@@ -681,6 +681,7 @@ body{display:flex;justify-content:center}
         const message=String(error&&error.message?error.message:error);
         if(/insufficient_points/i.test(message))pointExchangeModal('ポイントが足りません','現在のポイント残高を確認してください。ポイントは消費されていません。','alert');
         else if(/login_required/i.test(message))pointExchangeModal('ログインが必要です','ポイント交換はログイン済みアカウントのみ利用できます。','alert');
+        else if(/monthly_redemption_limit_reached/i.test(message))pointExchangeModal('今月の交換上限に達しました','ポイント交換は毎月2回までです。<br>今月の交換回数が上限に達したため、来月またご利用ください。<br>ポイントは消費されていません。','alert');
         else pointExchangeModal('交換に失敗しました','交換処理を完了できませんでした。ポイントは消費されていません。','alert');
       }finally{safeExchangeBusy=false;}
     };
