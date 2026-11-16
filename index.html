@@ -883,9 +883,84 @@ const KREDO_BACKEND = {
   get enabled(){ return Boolean(this.SUPABASE_URL && this.SUPABASE_ANON_KEY); }
 };
 let supabaseClient = null;
-if(KREDO_BACKEND.enabled && window.supabase){ supabaseClient = window.supabase.createClient(KREDO_BACKEND.SUPABASE_URL, KREDO_BACKEND.SUPABASE_ANON_KEY); }
 let authMode="signup";
 let currentUser=null;
+// Capture the recovery intent BEFORE Supabase Auth processes and cleans the callback URL.
+// Only an explicit recovery type is treated as a password-reset callback; a bare trailing '#'
+// is not evidence of a recovery request.
+const __kredoInitialHashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+const __kredoInitialSearchParams = new URLSearchParams(location.search);
+const __kredoRecoveryTypeAtStartup = __kredoInitialHashParams.get('type') === 'recovery'
+  || __kredoInitialSearchParams.get('type') === 'recovery';
+const __kredoRecoveryErrorCodeAtStartup = __kredoInitialHashParams.get('error_code')
+  || __kredoInitialSearchParams.get('error_code');
+const __kredoRecoveryErrorAtStartup = __kredoInitialHashParams.get('error')
+  || __kredoInitialSearchParams.get('error');
+const __kredoRecoveryRejectedAtStartup = Boolean(__kredoRecoveryErrorCodeAtStartup)
+  || __kredoRecoveryErrorAtStartup === 'access_denied';
+let __kredoRecoverySessionReady = false;
+let __kredoRecoveryScreenShown = false;
+
+function activateKredoRecoveryScreen(){
+  // This function is called only after Supabase confirms a recovery session.
+  if(!currentUser) return;
+  __kredoRecoverySessionReady = true;
+  __kredoRecoveryScreenShown = true;
+  authMode='login';
+  show('account');
+  switchAuth('login');
+  showRecoveryPanel();
+  showAccountStatus('新しいパスワードを入力してください。');
+}
+
+function activateKredoExpiredRecoveryScreen(message){
+  __kredoRecoveryScreenShown = false;
+  __kredoRecoverySessionReady = false;
+  authMode='login';
+  show('account');
+  switchAuth('login');
+  syncAccountUI();
+  const resetButton=document.getElementById('resetPasswordBtn');
+  if(resetButton)resetButton.textContent='再設定メールを再送する';
+  const panel=document.getElementById('recoveryPanel');
+  if(panel)panel.style.display='none';
+  showAccountStatus(message || 'この再設定リンクは期限切れ、または既に使用されています。メールアドレスを確認して再設定メールを再送してください。',true);
+  // Remove callback-only parameters while retaining the app version query (?v=50).
+  try{
+    const cleanUrl=new URL(location.href);
+    cleanUrl.hash='';
+    ['code','type','error','error_code','error_description'].forEach(key=>cleanUrl.searchParams.delete(key));
+    try{history.replaceState(null,'',cleanUrl.pathname+cleanUrl.search)}catch(historyError){console.warn('Expired recovery URL cleanup skipped:',historyError)}
+  }catch(e){
+    try{history.replaceState(null,'',location.pathname+location.search)}catch(historyError){console.warn('Expired recovery URL cleanup skipped:',historyError)}
+  }
+}
+
+if(KREDO_BACKEND.enabled && window.supabase){
+  supabaseClient = window.supabase.createClient(KREDO_BACKEND.SUPABASE_URL, KREDO_BACKEND.SUPABASE_ANON_KEY);
+}
+
+// Register the listener immediately after createClient and BEFORE getSession().
+// Supabase may consume the URL and emit PASSWORD_RECOVERY during initialization.
+if(supabaseClient){
+  supabaseClient.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN') currentUser=session?.user||currentUser;
+    if(event==='SIGNED_OUT') currentUser=null;
+
+    if(event==='PASSWORD_RECOVERY' && !__kredoRecoveryRejectedAtStartup){
+      currentUser=session?.user||currentUser;
+      if(currentUser) activateKredoRecoveryScreen();
+      else activateKredoExpiredRecoveryScreen('再設定リンクの認証は完了しましたが、セッションを取得できませんでした。最新のメールからもう一度開いてください。');
+    }else if(event==='INITIAL_SESSION' && __kredoRecoveryTypeAtStartup && !__kredoRecoveryRejectedAtStartup && session?.user){
+      currentUser=session.user;
+      activateKredoRecoveryScreen();
+    }
+
+    syncAccountUI();
+    renderAccountIndicators();
+    if(document.getElementById('mypage')?.classList.contains('active'))updateProfile();
+  });
+}
 
 let questions=[
   {
@@ -1852,24 +1927,43 @@ function renderAccountIndicators(){
 function switchAuth(mode){authMode=mode;document.getElementById('tabSignup').classList.toggle('active',mode==='signup');document.getElementById('tabLogin').classList.toggle('active',mode==='login');document.getElementById('accountTitle').textContent=mode==='signup'?'アカウントをつくる':'ログイン';document.getElementById('accountSub').textContent=mode==='signup'?'ランキングに参加するにはアカウント登録が必要です。ゲーム内の表示名だけをランキングに表示します。':'登録したメールアドレスとパスワードでログインします。';document.getElementById('displayNameField').style.display=mode==='signup'?'block':'none';document.getElementById('authPassword').setAttribute('autocomplete',mode==='signup'?'new-password':'current-password');document.getElementById('authSubmit').textContent=mode==='signup'?'アカウントを登録する':'ログイン';showAccountStatus('')}
 function showAccountStatus(msg,error=false){const el=document.getElementById('accountStatus');el.textContent=msg;el.className='account-status'+(msg?' show':'');if(msg)el.style.background=error?'#FFF3F0':'#F4FBFD';if(msg)el.style.color=error?'#A64D44':'#5A6E7C'}
 function continueDemoAccount(){const local=getLocalAccount()||{id:'demo-'+Date.now(),displayName:'デモプレイヤー',email:'',demo:true};setLocalAccount(local);currentUser=local;loadState();saveState();updateProfile();renderAccountIndicators();showAccountStatus('デモモードではクイズ体験のみ利用できます。ポイントの獲得・交換はできません。');showToast('👤 デモモードを開始しました')}
-async function sendPasswordReset(){const email=document.getElementById('authEmail').value.trim();if(!supabaseClient){showAccountStatus('デモモードではパスワード再設定は利用できません。',true);return}if(!email){showAccountStatus('先にメールアドレスを入力してください。',true);return}try{const redirectTo=location.href.split('#')[0];const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo});if(error)throw error;showAccountStatus('パスワード再設定メールを送信しました。メールの案内に沿って変更してください。')}catch(err){console.error('Password reset error:',err);showAccountStatus('再設定メールの送信に失敗しました：'+(err?.message||'不明なエラー'),true)}}
+async function sendPasswordReset(){const email=document.getElementById('authEmail').value.trim();if(!supabaseClient){showAccountStatus('デモモードではパスワード再設定は利用できません。',true);return}if(!email){showAccountStatus('先にメールアドレスを入力してください。',true);return}try{const redirectTo='https://hogetsu-kogyo.github.io/kredo-quest/index.html?v=50';const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo});if(error)throw error;showAccountStatus('パスワード再設定メールを送信しました。複数届いた場合は、最後に届いたメールを開いてください。')}catch(err){console.error('Password reset error:',err);showAccountStatus('再設定メールの送信に失敗しました：'+(err?.message||'不明なエラー'),true)}}
 async function updateRecoveryPassword(){
   const password=document.getElementById('recoveryPassword').value;
   if(!supabaseClient){showAccountStatus('パスワード再設定は利用できません。',true);return}
   if(!password||password.length<8){showAccountStatus('パスワードは8文字以上で入力してください。',true);return}
   try{
+    // Never attempt updateUser() unless the recovery session still exists.
+    const {data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!sessionData?.session?.user){
+      activateKredoExpiredRecoveryScreen('再設定セッションが確認できません。最新の再設定メールを開き直してください。');
+      return;
+    }
+
     const {error}=await supabaseClient.auth.updateUser({password});
     if(error)throw error;
-    document.getElementById('recoveryPanel').style.display='none';
+
+    // End only this browser's temporary recovery session so the user returns to login.
+    const {error:signOutError}=await supabaseClient.auth.signOut({scope:'local'});
+    if(signOutError)console.warn('Local sign-out after password recovery failed:',signOutError);
+    currentUser=null;
+    __kredoRecoverySessionReady=false;
+    __kredoRecoveryScreenShown=false;
+    const panel=document.getElementById('recoveryPanel');
+    if(panel)panel.style.display='none';
     document.getElementById('recoveryPassword').value='';
-    showAccountStatus('パスワードを変更しました。通常どおりログインできます。');
-    history.replaceState(null,'',location.pathname+location.search);
+    show('account');
+    switchAuth('login');
+    syncAccountUI();
+    showAccountStatus('パスワードを変更しました。新しいパスワードでログインしてください。');
+    try{history.replaceState(null,'',location.pathname+location.search)}catch(historyError){console.warn('Recovery URL cleanup skipped:',historyError)}
   }catch(err){
     console.error('Recovery password update error:',err);
     showAccountStatus('パスワード変更に失敗しました：'+(err?.message||'不明なエラー'),true);
   }
 }
-function showRecoveryPanel(){const panel=document.getElementById('recoveryPanel');if(panel)panel.style.display='block';}
+function showRecoveryPanel(){const panel=document.getElementById('recoveryPanel');if(panel){panel.style.display='block';panel.scrollIntoView({behavior:'smooth',block:'center'});const input=document.getElementById('recoveryPassword');if(input)input.focus({preventScroll:true});}}
 
 async function logoutAccount(){try{if(supabaseClient)await supabaseClient.auth.signOut()}catch(err){console.error('Logout error:',err)}currentUser=null;setLocalAccount(null);loadState();syncAccountUI();renderAccountIndicators();updateProfile();showAccountStatus('ログアウトしました。');showToast('👋 またね！')}
 
@@ -1973,21 +2067,35 @@ renderAccountIndicators();
 (async function restoreAuth(){
   if(supabaseClient){
     try{
-      const {data}=await supabaseClient.auth.getSession();
-      currentUser=data.session?.user||null;
-      if(currentUser)await ensureProfileAfterLogin();
+      const {data,error}=await supabaseClient.auth.getSession();
+      if(error)throw error;
+      currentUser=data.session?.user||currentUser||null;
+
+      if(__kredoRecoveryRejectedAtStartup){
+        activateKredoExpiredRecoveryScreen();
+      }else if(__kredoRecoveryTypeAtStartup){
+        if(currentUser){
+          // Covers SDK builds that restore the verified session without emitting
+          // PASSWORD_RECOVERY to a listener registered during initialization.
+          activateKredoRecoveryScreen();
+        }else{
+          activateKredoExpiredRecoveryScreen('再設定リンクを確認できませんでした。リンクが期限切れ、または既に使用されている可能性があります。最新のメールから開き直してください。');
+        }
+      }
+
+      if(currentUser && !__kredoRecoveryScreenShown && !__kredoRecoveryRejectedAtStartup){
+        await ensureProfileAfterLogin();
+      }
       if(document.getElementById('pointExchange')?.classList.contains('active'))await refreshPointExchangeBalance();
-      if(location.hash.includes('type=recovery')){show('account');showRecoveryPanel();}
-      supabaseClient.auth.onAuthStateChange((event,session)=>{
-        if(event==='SIGNED_IN')currentUser=session?.user||currentUser;
-        if(event==='SIGNED_OUT')currentUser=null;
-        if(event==='PASSWORD_RECOVERY'){currentUser=session?.user||currentUser;show('account');showRecoveryPanel();}
-        syncAccountUI();
-        renderAccountIndicators();
-        if(document.getElementById('mypage')?.classList.contains('active'))updateProfile();
-      });
       renderAccountIndicators();
-    }catch(e){renderAccountIndicators()}
+    }catch(e){
+      console.error('Auth session restore error:',e);
+      if(__kredoRecoveryTypeAtStartup || __kredoRecoveryRejectedAtStartup){
+        activateKredoExpiredRecoveryScreen('再設定リンクの認証状態を確認できませんでした。最新のメールからもう一度開いてください。');
+      }else{
+        renderAccountIndicators();
+      }
+    }
   }else{
     currentUser=getLocalAccount();
     if(currentUser){loadState();updateProfile()}
