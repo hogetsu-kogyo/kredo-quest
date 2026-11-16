@@ -885,6 +885,33 @@ const KREDO_BACKEND = {
 let supabaseClient = null;
 let authMode="signup";
 let currentUser=null;
+
+// Keep the user's intent across the email round-trip. Some Auth SDK/browser paths
+// report the callback as SIGNED_IN rather than PASSWORD_RECOVERY, and the URL
+// fragment may already have been consumed by the time the app handles the event.
+const KREDO_RECOVERY_PENDING_KEY='kredoQuestPasswordRecoveryPending';
+const KREDO_RECOVERY_PENDING_TTL=2*60*60*1000;
+function hasKredoRecoveryPending(){
+  try{
+    const raw=localStorage.getItem(KREDO_RECOVERY_PENDING_KEY);
+    if(!raw)return false;
+    const record=JSON.parse(raw);
+    const requestedAt=Number(record?.requestedAt);
+    if(!Number.isFinite(requestedAt)||Date.now()-requestedAt>KREDO_RECOVERY_PENDING_TTL||requestedAt>Date.now()+60000){
+      localStorage.removeItem(KREDO_RECOVERY_PENDING_KEY);
+      return false;
+    }
+    return true;
+  }catch(e){return false}
+}
+function markKredoRecoveryPending(email){
+  try{localStorage.setItem(KREDO_RECOVERY_PENDING_KEY,JSON.stringify({requestedAt:Date.now()}));return true}
+  catch(e){console.warn('Could not persist password recovery intent:',e);return false}
+}
+function clearKredoRecoveryPending(){
+  try{localStorage.removeItem(KREDO_RECOVERY_PENDING_KEY)}catch(e){console.warn('Could not clear password recovery intent:',e)}
+}
+let __kredoRecoveryPendingAtStartup=hasKredoRecoveryPending();
 // Capture the recovery intent BEFORE Supabase Auth processes and cleans the callback URL.
 // Only an explicit recovery type is treated as a password-reset callback; a bare trailing '#'
 // is not evidence of a recovery request.
@@ -892,6 +919,9 @@ const __kredoInitialHashParams = new URLSearchParams(location.hash.replace(/^#/,
 const __kredoInitialSearchParams = new URLSearchParams(location.search);
 const __kredoRecoveryTypeAtStartup = __kredoInitialHashParams.get('type') === 'recovery'
   || __kredoInitialSearchParams.get('type') === 'recovery';
+const __kredoAuthCallbackAtStartup = __kredoRecoveryTypeAtStartup
+  || __kredoInitialHashParams.has('access_token')
+  || __kredoInitialSearchParams.has('code');
 const __kredoRecoveryErrorCodeAtStartup = __kredoInitialHashParams.get('error_code')
   || __kredoInitialSearchParams.get('error_code');
 const __kredoRecoveryErrorAtStartup = __kredoInitialHashParams.get('error')
@@ -911,9 +941,19 @@ function activateKredoRecoveryScreen(){
   switchAuth('login');
   showRecoveryPanel();
   showAccountStatus('新しいパスワードを入力してください。');
+  // Supabase has now restored the callback session. Remove any consumed auth
+  // fragment/code from the address bar while preserving the app version (?v=50).
+  try{
+    const cleanUrl=new URL(location.href);
+    cleanUrl.hash='';
+    ['code','type','error','error_code','error_description'].forEach(key=>cleanUrl.searchParams.delete(key));
+    history.replaceState(null,'',cleanUrl.pathname+cleanUrl.search);
+  }catch(e){console.warn('Recovery callback URL cleanup skipped:',e)}
 }
 
 function activateKredoExpiredRecoveryScreen(message){
+  clearKredoRecoveryPending();
+  __kredoRecoveryPendingAtStartup=false;
   __kredoRecoveryScreenShown = false;
   __kredoRecoverySessionReady = false;
   authMode='login';
@@ -944,15 +984,31 @@ if(KREDO_BACKEND.enabled && window.supabase){
 // Supabase may consume the URL and emit PASSWORD_RECOVERY during initialization.
 if(supabaseClient){
   supabaseClient.auth.onAuthStateChange((event,session)=>{
-    if(event==='SIGNED_IN') currentUser=session?.user||currentUser;
+    if(event==='SIGNED_IN'){
+      currentUser=session?.user||currentUser;
+      // A recovery email round-trip may be emitted as SIGNED_IN. The pending
+      // marker was saved before sending the email, so route this session to
+      // password update instead of treating it as an ordinary app login.
+      if(!__kredoRecoveryRejectedAtStartup && hasKredoRecoveryPending()){
+        __kredoRecoveryPendingAtStartup=true;
+        activateKredoRecoveryScreen();
+      }
+    }
     if(event==='SIGNED_OUT') currentUser=null;
 
     if(event==='PASSWORD_RECOVERY' && !__kredoRecoveryRejectedAtStartup){
       currentUser=session?.user||currentUser;
-      if(currentUser) activateKredoRecoveryScreen();
-      else activateKredoExpiredRecoveryScreen('再設定リンクの認証は完了しましたが、セッションを取得できませんでした。最新のメールからもう一度開いてください。');
-    }else if(event==='INITIAL_SESSION' && __kredoRecoveryTypeAtStartup && !__kredoRecoveryRejectedAtStartup && session?.user){
+      if(currentUser){
+        markKredoRecoveryPending('');
+        __kredoRecoveryPendingAtStartup=true;
+        activateKredoRecoveryScreen();
+      }else{
+        activateKredoExpiredRecoveryScreen('再設定リンクの認証は完了しましたが、セッションを取得できませんでした。最新のメールからもう一度開いてください。');
+      }
+    }else if(event==='INITIAL_SESSION' && !__kredoRecoveryRejectedAtStartup && session?.user
+      && (__kredoRecoveryTypeAtStartup || (__kredoAuthCallbackAtStartup && hasKredoRecoveryPending()))){
       currentUser=session.user;
+      __kredoRecoveryPendingAtStartup=true;
       activateKredoRecoveryScreen();
     }
 
@@ -1927,7 +1983,26 @@ function renderAccountIndicators(){
 function switchAuth(mode){authMode=mode;document.getElementById('tabSignup').classList.toggle('active',mode==='signup');document.getElementById('tabLogin').classList.toggle('active',mode==='login');document.getElementById('accountTitle').textContent=mode==='signup'?'アカウントをつくる':'ログイン';document.getElementById('accountSub').textContent=mode==='signup'?'ランキングに参加するにはアカウント登録が必要です。ゲーム内の表示名だけをランキングに表示します。':'登録したメールアドレスとパスワードでログインします。';document.getElementById('displayNameField').style.display=mode==='signup'?'block':'none';document.getElementById('authPassword').setAttribute('autocomplete',mode==='signup'?'new-password':'current-password');document.getElementById('authSubmit').textContent=mode==='signup'?'アカウントを登録する':'ログイン';showAccountStatus('')}
 function showAccountStatus(msg,error=false){const el=document.getElementById('accountStatus');el.textContent=msg;el.className='account-status'+(msg?' show':'');if(msg)el.style.background=error?'#FFF3F0':'#F4FBFD';if(msg)el.style.color=error?'#A64D44':'#5A6E7C'}
 function continueDemoAccount(){const local=getLocalAccount()||{id:'demo-'+Date.now(),displayName:'デモプレイヤー',email:'',demo:true};setLocalAccount(local);currentUser=local;loadState();saveState();updateProfile();renderAccountIndicators();showAccountStatus('デモモードではクイズ体験のみ利用できます。ポイントの獲得・交換はできません。');showToast('👤 デモモードを開始しました')}
-async function sendPasswordReset(){const email=document.getElementById('authEmail').value.trim();if(!supabaseClient){showAccountStatus('デモモードではパスワード再設定は利用できません。',true);return}if(!email){showAccountStatus('先にメールアドレスを入力してください。',true);return}try{const redirectTo='https://hogetsu-kogyo.github.io/kredo-quest/index.html?v=50';const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo});if(error)throw error;showAccountStatus('パスワード再設定メールを送信しました。複数届いた場合は、最後に届いたメールを開いてください。')}catch(err){console.error('Password reset error:',err);showAccountStatus('再設定メールの送信に失敗しました：'+(err?.message||'不明なエラー'),true)}}
+async function sendPasswordReset(){
+  const email=document.getElementById('authEmail').value.trim();
+  if(!supabaseClient){showAccountStatus('デモモードではパスワード再設定は利用できません。',true);return}
+  if(!email){showAccountStatus('先にメールアドレスを入力してください。',true);return}
+  // Persist intent BEFORE the email round-trip so SIGNED_IN can be distinguished
+  // from an ordinary sign-in even if the callback URL no longer contains type=recovery.
+  markKredoRecoveryPending(email);
+  __kredoRecoveryPendingAtStartup=true;
+  try{
+    const redirectTo='https://hogetsu-kogyo.github.io/kredo-quest/index.html?v=50';
+    const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo});
+    if(error)throw error;
+    showAccountStatus('パスワード再設定メールを送信しました。メールを開くと新しいパスワードの入力画面に進みます。');
+  }catch(err){
+    clearKredoRecoveryPending();
+    __kredoRecoveryPendingAtStartup=false;
+    console.error('Password reset error:',err);
+    showAccountStatus('再設定メールの送信に失敗しました：'+(err?.message||'不明なエラー'),true);
+  }
+}
 async function updateRecoveryPassword(){
   const password=document.getElementById('recoveryPassword').value;
   if(!supabaseClient){showAccountStatus('パスワード再設定は利用できません。',true);return}
@@ -1944,6 +2019,8 @@ async function updateRecoveryPassword(){
     const {error}=await supabaseClient.auth.updateUser({password});
     if(error)throw error;
 
+    clearKredoRecoveryPending();
+    __kredoRecoveryPendingAtStartup=false;
     // End only this browser's temporary recovery session so the user returns to login.
     const {error:signOutError}=await supabaseClient.auth.signOut({scope:'local'});
     if(signOutError)console.warn('Local sign-out after password recovery failed:',signOutError);
@@ -1987,6 +2064,9 @@ async function submitAuth(){const displayName=document.getElementById('authDispl
         showAccountStatus('登録しました。確認メールをご確認のうえ、メール確認後にログインしてください。');
       }
     }else{
+      // A deliberate manual password login cancels any unsent/abandoned reset intent.
+      clearKredoRecoveryPending();
+      __kredoRecoveryPendingAtStartup=false;
       const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;currentUser=data.user;await ensureProfileAfterLogin();renderAccountIndicators();updateProfile();showAccountStatus('ログインしました。');showToast('👋 おかえりなさい！');show('ranking');
     }
   }catch(err){
@@ -2073,17 +2153,17 @@ renderAccountIndicators();
 
       if(__kredoRecoveryRejectedAtStartup){
         activateKredoExpiredRecoveryScreen();
-      }else if(__kredoRecoveryTypeAtStartup){
+      }else if(__kredoRecoveryTypeAtStartup || (__kredoRecoveryPendingAtStartup && currentUser)){
         if(currentUser){
-          // Covers SDK builds that restore the verified session without emitting
-          // PASSWORD_RECOVERY to a listener registered during initialization.
+          // Covers both the explicit recovery callback and SIGNED_IN callback
+          // where the email provider/SDK has already removed type=recovery.
           activateKredoRecoveryScreen();
-        }else{
+        }else if(__kredoRecoveryTypeAtStartup || __kredoAuthCallbackAtStartup){
           activateKredoExpiredRecoveryScreen('再設定リンクを確認できませんでした。リンクが期限切れ、または既に使用されている可能性があります。最新のメールから開き直してください。');
         }
       }
 
-      if(currentUser && !__kredoRecoveryScreenShown && !__kredoRecoveryRejectedAtStartup){
+      if(currentUser && !__kredoRecoveryScreenShown && !__kredoRecoveryRejectedAtStartup && !hasKredoRecoveryPending()){
         await ensureProfileAfterLogin();
       }
       if(document.getElementById('pointExchange')?.classList.contains('active'))await refreshPointExchangeBalance();
