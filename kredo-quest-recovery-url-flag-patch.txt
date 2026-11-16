@@ -1,0 +1,71 @@
+抱月クレドクエスト｜パスワード再設定のブラウザ切り替え対策
+対象ファイル：hogetsu-kogyo/kredo-quest の main/index.html
+
+目的
+再設定メールを依頼したブラウザ（例：Chrome）と、メールリンクを開くブラウザ（例：Edge）が違っても、再設定フォームに進めるようにする。
+既存アカウント・ポイント・ランキング・通常ログイン処理は変更しない。
+
+変更1：再設定URLの判定を追加
+index.html 内の次の部分を検索：
+
+const __kredoRecoveryTypeAtStartup = __kredoInitialHashParams.get('type') === 'recovery'
+  || __kredoInitialSearchParams.get('type') === 'recovery';
+
+次の内容に置き換える：
+
+const __kredoRecoveryTypeAtStartup = __kredoInitialHashParams.get('type') === 'recovery'
+  || __kredoInitialSearchParams.get('type') === 'recovery'
+  // メールリンクを別ブラウザで開いても、URLの目印で再設定中と判定する。
+  || __kredoInitialSearchParams.get('recovery') === '1';
+
+
+変更2：SIGNED_IN の振り分け条件を追加
+onAuthStateChange の中にある次の部分を検索：
+
+      if(!__kredoRecoveryRejectedAtStartup && hasKredoRecoveryPending()){
+        __kredoRecoveryPendingAtStartup=true;
+        activateKredoRecoveryScreen();
+      }
+
+次の内容に置き換える：
+
+      if(!__kredoRecoveryRejectedAtStartup
+        && (hasKredoRecoveryPending() || __kredoRecoveryTypeAtStartup)){
+        __kredoRecoveryPendingAtStartup=true;
+        activateKredoRecoveryScreen();
+      }
+
+
+変更3：再設定メールの戻り先URLに目印を追加
+sendPasswordReset() 内の次の行を検索：
+
+    const redirectTo='https://hogetsu-kogyo.github.io/kredo-quest/index.html?v=50';
+
+次の内容に置き換える：
+
+    const redirectTo='https://hogetsu-kogyo.github.io/kredo-quest/index.html?v=50&recovery=1';
+
+
+変更4：認証情報・再設定フラグのURL掃除
+index.html 内に次の文字列が2か所あるので、両方を置き換える：
+
+['code','type','error','error_code','error_description'].forEach(key=>cleanUrl.searchParams.delete(key));
+
+次の内容に置き換える：
+
+['code','type','error','error_code','error_description','recovery'].forEach(key=>cleanUrl.searchParams.delete(key));
+
+
+テスト結果（模擬テスト）
+1. Chromeで再設定を依頼し、Edgeでリンクを開く（localStorageなし）：再設定フォームを表示
+2. Supabaseが初期セッションを復元する経路：再設定フォームを表示
+3. 通常ログイン：再設定フォームを表示しない
+4. 期限切れ・認証エラー：エラー画面を優先し、再設定フラグを消去
+5. 既存の PASSWORD_RECOVERY イベント：従来どおり再設定フォームを表示
+
+注意
+・これは差分手順であり、index.html 全体の完成版ではない。
+・GitHub連携の更新APIが403で拒否されたため、会社リポジトリにはまだ反映されていない。
+・SupabaseのRedirect URLsがクエリ文字列まで完全一致で登録されている場合は、次のURLも許可リストに加える必要がある：
+  https://hogetsu-kogyo.github.io/kredo-quest/index.html?v=50&recovery=1
+・模擬テストは通過したが、実際のOutlookメールを使った最終確認は未実施。
